@@ -19,11 +19,13 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
         return nil, err
     }
 
+    // Inicializa o campo "course" como um array vazio
     userToInsert := model.User{
-        Id:       primitive.NewObjectID(),
-        Name:     user.Name,
-        Password: hashedPassword,
-        Date:     primitive.NewDateTimeFromTime(time.Now()),
+        Id:        primitive.NewObjectID(),
+        Name:      user.Name,
+        Password:  hashedPassword,
+        Date:      primitive.NewDateTimeFromTime(time.Now()),
+        Cursos:    []model.Course{}, // Inicializa o campo "course" como um array vazio
     }
 
     ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -34,6 +36,7 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
 
     return result, nil
 }
+
 
 
 
@@ -60,4 +63,16 @@ func Login(user model.User) (string, error) {
     }
 
     return token, nil
+}
+
+func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {
+    // Encontrar o usuário pelo ID
+    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+    filter := bson.M{"_id": userID}
+    update := bson.M{"$push": bson.M{"cursos": courseID}} // Corrigido para "cursos"
+    _, err := userCollection.UpdateOne(context.Background(), filter, update)
+    if err != nil {
+        return err
+    }
+    return nil
 }

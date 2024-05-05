@@ -12,11 +12,10 @@ type Course struct {
 }
 
 type User struct {
-	Id          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	Date        primitive.DateTime `json:"date"          bson:"date"`
-	Name        string             `json:"name"          bson:"name"`
-	Password	string             `json:"password"      bson:"password"`
-	Cursos      []Course           `json:"course"        bson:"course"`
+    Id          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+    Date        primitive.DateTime `json:"date"          bson:"date"`
+    Name        string             `json:"name"          bson:"name"`
+    Professor   bool               `json:"professor"     bson:"professor"`
+    Password    string             `json:"password"      bson:"password"`
+    Cursos      []Course           `json:"cursos"        bson:"cursos"` // Corrigido para "cursos"
 }
-
-

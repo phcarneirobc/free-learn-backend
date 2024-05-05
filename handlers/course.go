@@ -61,12 +61,13 @@ func readAllCourse(
 	return cur, err
 }
 
+
 func GetAllCourses() ([]model.Course, error) {
 	cur, err := readAllCourse(
 		db.Instance.Client,
 		db.Instance.Context,
 		db.Instance.Dbname,
-		db.ProductCollection,
+		db.CourseCollection,
 	)
 	if err != nil {
 		return nil, err
@@ -92,7 +93,7 @@ func GetAllCourses() ([]model.Course, error) {
 
 func updateCourseByID(id primitive.ObjectID, updateData bson.M) error {
 	collection := db.Instance.Client.Database(db.Instance.Dbname).
-		Collection(db.ProductCollection)
+		Collection(db.CourseCollection)
 	_, err := collection.UpdateOne(
 		db.Instance.Context,
 		bson.M{"_id": id},
@@ -127,3 +128,4 @@ func deleteCourseByID(id primitive.ObjectID) error {
 func DeleteCourse(courseID primitive.ObjectID) error {
 	return deleteCourseByID(courseID)
 }
+
