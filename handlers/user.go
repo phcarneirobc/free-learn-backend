@@ -19,13 +19,13 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
         return nil, err
     }
 
-    // Inicializa o campo "course" como um array vazio
+    // Inicializa o campo "cursos" como um array vazio de primitive.ObjectID
     userToInsert := model.User{
         Id:        primitive.NewObjectID(),
         Name:      user.Name,
         Password:  hashedPassword,
         Date:      primitive.NewDateTimeFromTime(time.Now()),
-        Cursos:    []model.Course{}, // Inicializa o campo "course" como um array vazio
+        Cursos:    []primitive.ObjectID{}, // Corrigido para []primitive.ObjectID
     }
 
     ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -38,31 +38,38 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
 }
 
 
+type LoginResponse struct {
+    ID    primitive.ObjectID
+    Token string
+    Professor  bool
+}
 
-
-func Login(user model.User) (string, error) {
+func Login(user model.User) (LoginResponse, error) {
     collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
 
     var result model.User
     err := collection.FindOne(context.Background(), bson.M{"name": user.Name}).Decode(&result)
     if err != nil {
         if err == mongo.ErrNoDocuments {
-            return "", errors.New("user not found")
+            return LoginResponse{}, errors.New("user not found")
         }
-        return "", err
+        return LoginResponse{}, err
     }
 
     match := auth.CheckPasswordHash(user.Password, result.Password)
     if !match {
-        return "", errors.New("invalid password")
+        return LoginResponse{}, errors.New("invalid password")
     }
 
     token, err := auth.GenerateToken(result)
     if err != nil {
-        return "", err
+        return LoginResponse{}, err
     }
-
-    return token, nil
+    return LoginResponse{
+        ID:    result.Id,
+        Token: token,
+        Professor:  result.Professor,
+    }, nil
 }
 
 func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {

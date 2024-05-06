@@ -17,5 +17,5 @@ type User struct {
     Name        string             `json:"name"          bson:"name"`
     Professor   bool               `json:"professor"     bson:"professor"`
     Password    string             `json:"password"      bson:"password"`
-    Cursos      []Course           `json:"cursos"        bson:"cursos"` // Corrigido para "cursos"
+    Cursos      []primitive.ObjectID `json:"cursos"        bson:"cursos"` // Corrigido para []primitive.ObjectID
 }
