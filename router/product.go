@@ -1,9 +1,12 @@
 package router
 
 import (
+
 	"github.com/gin-gonic/gin"
+
 	"github.com/phcarneirobc/free-learn/handlers"
 	"github.com/phcarneirobc/free-learn/model"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -113,26 +116,27 @@ func UpdateCourseValue(c *gin.Context) {
 }
 
 func DeleteCourse(c *gin.Context) {
-	courseID := c.Param("id")
+    courseID := c.Param("id")
 
-	courseObjectID, err := primitive.ObjectIDFromHex(courseID)
-	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid course ID"})
-		return
-	}
+    courseObjectID, err := primitive.ObjectIDFromHex(courseID)
+    if err != nil {
+        c.JSON(400, gin.H{"error": "Invalid course ID"})
+        return
+    }
 
-	// Delete the machine
-	err = handlers.DeleteCourse(courseObjectID)
-	if err != nil {
-		c.JSON(
-			500,
-			gin.H{
-				"error":   "Failed to delete course",
-				"details": err.Error(),
-			},
-		)
-		return
-	}
+    // Delete the course
+    err = handlers.DeleteCourse(courseObjectID) // Call the correct function here
+    if err != nil {
+        c.JSON(
+            500,
+            gin.H{
+                "error":   "Failed to delete course",
+                "details": err.Error(),
+            },
+        )
+        return
+    }
 
-	c.JSON(200, gin.H{"message": "Course deleted successfully"})
+    c.JSON(200, gin.H{"message": "Course deleted successfully"})
 }
+

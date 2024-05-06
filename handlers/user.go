@@ -83,3 +83,29 @@ func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) err
     }
     return nil
 }
+
+func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
+    // Encontrar o usuário pelo ID
+    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+    var user model.User
+    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+    if err != nil {
+        return nil, err
+    }
+
+    // Buscar os cursos pelo ID
+    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+    cursor, err := courseCollection.Find(context.Background(), filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var courses []model.Course
+    if err = cursor.All(context.Background(), &courses); err != nil {
+        return nil, err
+    }
+
+    return courses, nil
+}

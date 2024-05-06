@@ -118,11 +118,17 @@ func UpdateCourseValue(
 	return updateCourseByID(courseID, updateData)
 }
 
-func deleteCourseByID(id primitive.ObjectID) error {
-	collection := db.Instance.Client.Database(db.Instance.Dbname).
-		Collection(db.CourseCollection)
-	_, err := collection.DeleteOne(db.Instance.Context, bson.M{"_id": id})
-	return err
+func deleteCourseByID(courseObjectID primitive.ObjectID) error {
+    // Get a handle to the collection
+    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+
+    // Delete the course
+    _, err := courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseObjectID})
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
 
 func DeleteCourse(courseID primitive.ObjectID) error {

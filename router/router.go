@@ -1,13 +1,15 @@
 package router
 
 import (
+	"context"
+	"net/http"
 
-	"github.com/phcarneirobc/free-learn/db"
 	"github.com/gin-gonic/gin"
+	"github.com/phcarneirobc/free-learn/auth"
+	"github.com/phcarneirobc/free-learn/db"
 	"github.com/phcarneirobc/free-learn/handlers"
 	"github.com/phcarneirobc/free-learn/model"
-	"net/http"
-	"github.com/phcarneirobc/free-learn/auth"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -54,7 +56,31 @@ func AddCourseToUserHandler(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
 }
 
+func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
+    // Encontrar o usuário pelo ID
+    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+    var user model.User
+    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+    if err != nil {
+        return nil, err
+    }
 
+    // Buscar os cursos pelo ID
+    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+    cursor, err := courseCollection.Find(context.Background(), filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var courses []model.Course
+    if err = cursor.All(context.Background(), &courses); err != nil {
+        return nil, err
+    }
+
+    return courses, nil
+}
 
 
 func Start(port string) {
@@ -63,7 +89,7 @@ func Start(port string) {
 	r.Use(CORSMiddleware())
 
 	r.GET("/ping", HealthRoute)
-
+	r.GET("/get", GetAllCourses)
 	r.POST("/register", func(c *gin.Context) {
         var user model.User
         if err := c.ShouldBindJSON(&user); err != nil {
@@ -80,6 +106,7 @@ func Start(port string) {
 	
     })
 
+	
 
 	r.POST("/login", func(c *gin.Context) {
 		var user model.User
@@ -99,11 +126,25 @@ func Start(port string) {
 	pg.Use(CORSMiddleware())
 	pg.Use(auth.AuthenticateToken) 
 	pg.POST("/post", PostCourse)
-	pg.GET("/get", GetAllCourses)
 	pg.GET("/get/:id", GetCourseByID)
 	pg.PUT("/update/:id", UpdateCourseValue)
 	pg.DELETE("/delete/:id", DeleteCourse)
 	pg.POST("/add-course-to-user/:id", AddCourseToUserHandler)
+	pg.GET("/get-user-courses/:id", func(c *gin.Context) {
+		userID := c.Param("id")
+		objectID, err := primitive.ObjectIDFromHex(userID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		courses, err := GetUserCourses(objectID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, courses)
+	})
+	
 
 	err := r.Run(port)
 	if err != nil {
