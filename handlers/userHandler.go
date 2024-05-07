@@ -25,6 +25,7 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
         Id:        primitive.NewObjectID(),
         Email:      user.Email,
         Password:  hashedPassword,
+        Professor: user.Professor,
         Date:      primitive.NewDateTimeFromTime(time.Now()),
         Cursos:    []primitive.ObjectID{}, 
     }
@@ -80,7 +81,7 @@ func Login(user model.User) (LoginResponse, error) {
 func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {
     userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
     filter := bson.M{"_id": userID}
-    update := bson.M{"$push": bson.M{"cursos": courseID}} // Corrigido para "cursos"
+    update := bson.M{"$push": bson.M{"cursos": courseID}} 
     _, err := userCollection.UpdateOne(context.Background(), filter, update)
     if err != nil {
         return err
