@@ -22,7 +22,7 @@ const (
 )
 
 type Claims struct {
-    Username string `json:"username"`
+    Email string `json:"email"`
     jwt.StandardClaims
 }
 
@@ -77,7 +77,7 @@ func GenerateToken(user model.User) (string, error) {
     expirationTime := time.Now().Add(24 * time.Hour)
 
     claims := &Claims{
-        Username: user.Name,
+        Email: user.Email,
         StandardClaims: jwt.StandardClaims{
             ExpiresAt: expirationTime.Unix(),
         },
@@ -112,5 +112,5 @@ func ValidateToken(tknStr string) (bool, string) {
         return false, ErrInvalidTokenSignature
     }
 
-    return true, claims.Username
+    return true, claims.Email
 }

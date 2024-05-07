@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/phcarneirobc/free-learn/auth"
@@ -22,7 +24,7 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
     // Inicializa o campo "cursos" como um array vazio de primitive.ObjectID
     userToInsert := model.User{
         Id:        primitive.NewObjectID(),
-        Name:      user.Name,
+        Email:      user.Email,
         Password:  hashedPassword,
         Date:      primitive.NewDateTimeFromTime(time.Now()),
         Cursos:    []primitive.ObjectID{}, // Corrigido para []primitive.ObjectID
@@ -47,14 +49,20 @@ type LoginResponse struct {
 func Login(user model.User) (LoginResponse, error) {
     collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
 
+    // Converter o email fornecido para minúsculas
+    email := strings.ToLower(user.Email)
+    fmt.Println("Email fornecido:", email)
+
     var result model.User
-    err := collection.FindOne(context.Background(), bson.M{"name": user.Name}).Decode(&result)
+    err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&result)
     if err != nil {
         if err == mongo.ErrNoDocuments {
-            return LoginResponse{}, errors.New("user not found")
+            return LoginResponse{}, errors.New("email not found")
         }
         return LoginResponse{}, err
     }
+
+    fmt.Println("Email encontrado no banco de dados:", result.Email)
 
     match := auth.CheckPasswordHash(user.Password, result.Password)
     if !match {
@@ -71,6 +79,8 @@ func Login(user model.User) (LoginResponse, error) {
         Professor:  result.Professor,
     }, nil
 }
+
+
 
 func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {
     // Encontrar o usuário pelo ID

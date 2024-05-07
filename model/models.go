@@ -14,7 +14,7 @@ type Course struct {
 type User struct {
     Id          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
     Date        primitive.DateTime `json:"date"          bson:"date"`
-    Name        string             `json:"name"          bson:"name"`
+    Email       string             `json:"email"          bson:"email"`
     Professor   bool               `json:"professor"     bson:"professor"`
     Password    string             `json:"password"      bson:"password"`
     Cursos      []primitive.ObjectID `json:"cursos"        bson:"cursos"` // Corrigido para []primitive.ObjectID
