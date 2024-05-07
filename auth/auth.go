@@ -1,116 +1,110 @@
 package auth
 
 import (
-    "os"
-    "time"
-    "errors"
-    "net/http"
-    "strings"
-    "github.com/gin-gonic/gin"
-    
-    "github.com/dgrijalva/jwt-go"
-    "golang.org/x/crypto/bcrypt"
-    "github.com/phcarneirobc/free-learn/model"
-  
+	"errors"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/phcarneirobc/free-learn/model"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtKey = []byte(os.Getenv("JWT_SECRET")) // Get secret key from environment variable
+var jwtKey = []byte(os.Getenv("JWT_SECRET"))
 
 const (
-    ErrInvalidTokenSignature = "Invalid token signature"
-    ErrCouldNotParseToken    = "Could not parse token"
+	ErrInvalidTokenSignature = "Invalid token signature"
+	ErrCouldNotParseToken    = "Could not parse token"
 )
 
 type Claims struct {
-    Email string `json:"email"`
-    jwt.StandardClaims
+	Email string `json:"email"`
+	jwt.StandardClaims
 }
 
 func AuthenticateToken(c *gin.Context) {
-    authHeader := c.GetHeader("Authorization")
-    if authHeader == "" {
-        c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No Authorization header provided"})
-        return
-    }
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No Authorization header provided"})
+		return
+	}
 
-    bearerToken := strings.Split(authHeader, " ")
-    if len(bearerToken) != 2 {
-        c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
-        return
-    }
+	bearerToken := strings.Split(authHeader, " ")
+	if len(bearerToken) != 2 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+		return
+	}
 
-    token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, errors.New("Unexpected signing method")
-        }
-        return jwtKey, nil
-    })
+	token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("Unexpected signing method")
+		}
+		return jwtKey, nil
+	})
 
-    if err != nil {
-        c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-        return
-    }
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
 
-    if !token.Valid {
-        c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-        return
-    }
+	if !token.Valid {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
 
-    c.Next()
+	c.Next()
 }
 
 func HashPassword(password string) (string, error) {
-    bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12) // Reduce cost to 12
-    return string(bytes), err
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	return string(bytes), err
 }
 
-// CheckPasswordHash checks a password against a hashed password
 func CheckPasswordHash(password, hash string) bool {
-    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-    return err == nil
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
-// GenerateToken generates a JWT token for a given user
 func GenerateToken(user model.User) (string, error) {
-   
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		Email: user.Email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
 
-    expirationTime := time.Now().Add(24 * time.Hour)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-    claims := &Claims{
-        Email: user.Email,
-        StandardClaims: jwt.StandardClaims{
-            ExpiresAt: expirationTime.Unix(),
-        },
-    }
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		return "", err
+	}
 
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-    tokenString, err := token.SignedString(jwtKey)
-    if err != nil {
-        return "", err
-    }
-
-    return tokenString, nil
+	return tokenString, nil
 }
 
-// ValidateToken validates the JWT token
 func ValidateToken(tknStr string) (bool, string) {
-    claims := &Claims{}
+	claims := &Claims{}
 
-    tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-        return jwtKey, nil
-    })
+	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
 
-    if err != nil {
-        if err == jwt.ErrSignatureInvalid {
-            return false, ErrInvalidTokenSignature
-        }
-        return false, ErrCouldNotParseToken
-    }
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return false, ErrInvalidTokenSignature
+		}
+		return false, ErrCouldNotParseToken
+	}
 
-    if !tkn.Valid {
-        return false, ErrInvalidTokenSignature
-    }
+	if !tkn.Valid {
+		return false, ErrInvalidTokenSignature
+	}
 
-    return true, claims.Email
+	return true, claims.Email
 }

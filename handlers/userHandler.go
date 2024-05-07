@@ -21,13 +21,12 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
         return nil, err
     }
 
-    // Inicializa o campo "cursos" como um array vazio de primitive.ObjectID
     userToInsert := model.User{
         Id:        primitive.NewObjectID(),
         Email:      user.Email,
         Password:  hashedPassword,
         Date:      primitive.NewDateTimeFromTime(time.Now()),
-        Cursos:    []primitive.ObjectID{}, // Corrigido para []primitive.ObjectID
+        Cursos:    []primitive.ObjectID{}, 
     }
 
     ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
@@ -39,7 +38,6 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
     return result, nil
 }
 
-
 type LoginResponse struct {
     ID    primitive.ObjectID
     Token string
@@ -49,7 +47,6 @@ type LoginResponse struct {
 func Login(user model.User) (LoginResponse, error) {
     collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
 
-    // Converter o email fornecido para minúsculas
     email := strings.ToLower(user.Email)
     fmt.Println("Email fornecido:", email)
 
@@ -80,10 +77,7 @@ func Login(user model.User) (LoginResponse, error) {
     }, nil
 }
 
-
-
 func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {
-    // Encontrar o usuário pelo ID
     userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
     filter := bson.M{"_id": userID}
     update := bson.M{"$push": bson.M{"cursos": courseID}} // Corrigido para "cursos"
@@ -95,7 +89,6 @@ func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) err
 }
 
 func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
-    // Encontrar o usuário pelo ID
     userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
     var user model.User
     err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
@@ -103,7 +96,6 @@ func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
         return nil, err
     }
 
-    // Buscar os cursos pelo ID
     courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
     filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
     cursor, err := courseCollection.Find(context.Background(), filter)

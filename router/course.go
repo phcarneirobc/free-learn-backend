@@ -1,12 +1,16 @@
 package router
 
 import (
+	"context"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/phcarneirobc/free-learn/db"
 	"github.com/phcarneirobc/free-learn/handlers"
 	"github.com/phcarneirobc/free-learn/model"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -52,7 +56,7 @@ func GetCourseByID(c *gin.Context) {
 		return
 	}
 
-	// Get the machine by ID
+	// Get the course by ID
 	result, err := handlers.GetCourseByID(courseObjectID)
 	if err != nil {
 		c.JSON(
@@ -93,7 +97,7 @@ func UpdateCourseValue(c *gin.Context) {
 		return
 	}
 
-	// Update the machine
+	// Update the Course
 	err = handlers.UpdateCourseValue(
 		courseObjectID,
 		courseUpdate.Name,
@@ -125,7 +129,7 @@ func DeleteCourse(c *gin.Context) {
     }
 
     // Delete the course
-    err = handlers.DeleteCourse(courseObjectID) // Call the correct function here
+    err = handlers.DeleteCourse(courseObjectID) 
     if err != nil {
         c.JSON(
             500,
@@ -140,3 +144,57 @@ func DeleteCourse(c *gin.Context) {
     c.JSON(200, gin.H{"message": "Course deleted successfully"})
 }
 
+func AddCourseToUser(c *gin.Context) {
+    userID := c.Param("id")
+
+    userIDObj, err := primitive.ObjectIDFromHex(userID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+        return
+    }
+
+    var courseID struct {
+        CourseID string `json:"course_id"`
+    }
+    if err := c.ShouldBindJSON(&courseID); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+        return
+    }
+
+    courseIDObj, err := primitive.ObjectIDFromHex(courseID.CourseID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+        return
+    }
+
+    if err := handlers.AddCourseToUser(userIDObj, courseIDObj); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
+}
+
+func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
+    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+    var user model.User
+    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+    if err != nil {
+        return nil, err
+    }
+
+    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+    cursor, err := courseCollection.Find(context.Background(), filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var courses []model.Course
+    if err = cursor.All(context.Background(), &courses); err != nil {
+        return nil, err
+    }
+
+    return courses, nil
+}

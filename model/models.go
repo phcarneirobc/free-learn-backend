@@ -17,5 +17,5 @@ type User struct {
     Email       string             `json:"email"          bson:"email"`
     Professor   bool               `json:"professor"     bson:"professor"`
     Password    string             `json:"password"      bson:"password"`
-    Cursos      []primitive.ObjectID `json:"cursos"        bson:"cursos"` // Corrigido para []primitive.ObjectID
+    Cursos      []primitive.ObjectID `json:"cursos"        bson:"cursos"`
 }

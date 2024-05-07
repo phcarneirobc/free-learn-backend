@@ -39,14 +39,12 @@ func GetCourseByID(courseID primitive.ObjectID) (*model.Course, error) {
 func getCourseByID(id primitive.ObjectID) (*model.Course, error) {
 	collection := db.Instance.Client.Database(db.Instance.Dbname).
 		Collection(db.CourseCollection)
-
 	var result model.Course
 	err := collection.FindOne(db.Instance.Context, bson.M{"_id": id}).
 		Decode(&result)
 	if err != nil {
 		return nil, err
 	}
-
 	return &result, nil
 }
 
@@ -60,7 +58,6 @@ func readAllCourse(
 	cur, err := collection.Find(ctx, bson.M{})
 	return cur, err
 }
-
 
 func GetAllCourses() ([]model.Course, error) {
 	cur, err := readAllCourse(
@@ -113,13 +110,12 @@ func UpdateCourseValue(
 	updateData := bson.M{
 		"Name":        name,
 		"Description": description,
-		"Link":       link,
+		"Link":        link,
 	}
 	return updateCourseByID(courseID, updateData)
 }
 
 func deleteCourseByID(courseObjectID primitive.ObjectID) error {
-    // Get a handle to the collection
     courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
 
     // Delete the course

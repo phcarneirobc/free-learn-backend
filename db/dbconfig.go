@@ -5,7 +5,6 @@ import (
 )
 
 const CourseCollection = "course"
-const ProductCollection = "products"
 const UserCollection = "users"
 
 // const
