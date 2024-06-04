@@ -16,19 +16,14 @@ import (
 
 func PostCourse(c *gin.Context) {
 	var reading model.Course
-	err := c.BindJSON(&reading)
-	if err != nil {
-		c.JSON(400, gin.H{
-			"message": "Bad Request",
-		})
+	if err := c.BindJSON(&reading); err != nil {
+		c.JSON(400, gin.H{"message": "Bad Request"})
 		return
 	}
 
 	object, err := handlers.PostCourse(reading)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"message": err.Error(),
-		})
+		c.JSON(500, gin.H{"message": err.Error()})
 		return
 	}
 
@@ -38,9 +33,7 @@ func PostCourse(c *gin.Context) {
 func GetAllCourses(c *gin.Context) {
 	readings, err := handlers.GetAllCourses()
 	if err != nil {
-		c.JSON(500, gin.H{
-			"message": err.Error(),
-		})
+		c.JSON(500, gin.H{"message": err.Error()})
 		return
 	}
 
@@ -56,15 +49,9 @@ func GetCourseByID(c *gin.Context) {
 		return
 	}
 
-	// Get the course by ID
 	result, err := handlers.GetCourseByID(courseObjectID)
 	if err != nil {
-		c.JSON(
-			500, gin.H{
-				"error":   "Failed to get course by ID",
-				"details": err.Error(),
-			},
-		)
+		c.JSON(500, gin.H{"error": "Failed to get course by ID", "details": err.Error()})
 		return
 	}
 
@@ -80,10 +67,11 @@ func UpdateCourseValue(c *gin.Context) {
 	courseID := c.Param("id")
 
 	var courseUpdate struct {
-		Name        string  `json:"name"`
-		Description string  `json:"description"`
-		Link       string `json:"link"`
-		Image string `json:"image"`
+		Name        string          `json:"name"`
+		Description string          `json:"description"`
+		Link        string          `json:"link"`
+		Image       string          `json:"image"`
+		Modules     []model.Module  `json:"modules"`
 	}
 
 	if err := c.BindJSON(&courseUpdate); err != nil {
@@ -97,22 +85,9 @@ func UpdateCourseValue(c *gin.Context) {
 		return
 	}
 
-	// Update the Course
-	err = handlers.UpdateCourseValue(
-		courseObjectID,
-		courseUpdate.Name,
-		courseUpdate.Description,
-		courseUpdate.Link,
-		courseUpdate.Image,
-	)
+	err = handlers.UpdateCourseValue(courseObjectID, courseUpdate.Name, courseUpdate.Description, courseUpdate.Link, courseUpdate.Image, courseUpdate.Modules)
 	if err != nil {
-		c.JSON(
-			500,
-			gin.H{
-				"error":   "Failed to update course",
-				"details": err.Error(),
-			},
-		)
+		c.JSON(500, gin.H{"error": "Failed to update course", "details": err.Error()})
 		return
 	}
 
@@ -120,28 +95,45 @@ func UpdateCourseValue(c *gin.Context) {
 }
 
 func DeleteCourse(c *gin.Context) {
-    courseID := c.Param("id")
+	courseID := c.Param("id")
 
-    courseObjectID, err := primitive.ObjectIDFromHex(courseID)
+	courseObjectID, err := primitive.ObjectIDFromHex(courseID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	err = handlers.DeleteCourse(courseObjectID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to delete course", "details": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Course deleted successfully"})
+}
+
+func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
+    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+    var user model.User
+    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
     if err != nil {
-        c.JSON(400, gin.H{"error": "Invalid course ID"})
-        return
+        return nil, err
     }
 
-    // Delete the course
-    err = handlers.DeleteCourse(courseObjectID) 
+    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+    cursor, err := courseCollection.Find(context.Background(), filter)
     if err != nil {
-        c.JSON(
-            500,
-            gin.H{
-                "error":   "Failed to delete course",
-                "details": err.Error(),
-            },
-        )
-        return
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var courses []model.Course
+    if err = cursor.All(context.Background(), &courses); err != nil {
+        return nil, err
     }
 
-    c.JSON(200, gin.H{"message": "Course deleted successfully"})
+    return courses, nil
 }
 
 func AddCourseToUser(c *gin.Context) {
@@ -173,28 +165,4 @@ func AddCourseToUser(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
-}
-
-func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
-    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
-    var user model.User
-    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
-    if err != nil {
-        return nil, err
-    }
-
-    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
-    cursor, err := courseCollection.Find(context.Background(), filter)
-    if err != nil {
-        return nil, err
-    }
-    defer cursor.Close(context.Background())
-
-    var courses []model.Course
-    if err = cursor.All(context.Background(), &courses); err != nil {
-        return nil, err
-    }
-
-    return courses, nil
 }

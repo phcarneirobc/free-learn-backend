@@ -13,13 +13,15 @@ import (
 )
 
 func PostCourse(read model.Course) (model.Course, error) {
-	toInsert := model.Course{}
-	toInsert.Id = primitive.NewObjectID()
-	toInsert.Date = primitive.NewDateTimeFromTime(time.Now())
-	toInsert.Name = read.Name
-	toInsert.Description = read.Description
-	toInsert.Link = read.Link
-	toInsert.Image = read.Image
+	toInsert := model.Course{
+		Id:          primitive.NewObjectID(),
+		Date:        primitive.NewDateTimeFromTime(time.Now()),
+		Name:        read.Name,
+		Description: read.Description,
+		Image:       read.Image,
+		Link:        read.Link,
+		Modules:     read.Modules,
+	}
 
 	_, err := db.InsertOne(
 		db.Instance.Client,
@@ -37,35 +39,23 @@ func GetCourseByID(courseID primitive.ObjectID) (*model.Course, error) {
 }
 
 func getCourseByID(id primitive.ObjectID) (*model.Course, error) {
-	collection := db.Instance.Client.Database(db.Instance.Dbname).
-		Collection(db.CourseCollection)
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
 	var result model.Course
-	err := collection.FindOne(db.Instance.Context, bson.M{"_id": id}).
-		Decode(&result)
+	err := collection.FindOne(db.Instance.Context, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-func readAllCourse(
-	client *mongo.Client,
-	ctx context.Context,
-	dataBase, col string,
-) (*mongo.Cursor, error) {
+func readAllCourse(client *mongo.Client, ctx context.Context, dataBase, col string) (*mongo.Cursor, error) {
 	collection := client.Database(dataBase).Collection(col)
-
 	cur, err := collection.Find(ctx, bson.M{})
 	return cur, err
 }
 
 func GetAllCourses() ([]model.Course, error) {
-	cur, err := readAllCourse(
-		db.Instance.Client,
-		db.Instance.Context,
-		db.Instance.Dbname,
-		db.CourseCollection,
-	)
+	cur, err := readAllCourse(db.Instance.Client, db.Instance.Context, db.Instance.Dbname, db.CourseCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -89,42 +79,29 @@ func GetAllCourses() ([]model.Course, error) {
 }
 
 func updateCourseByID(id primitive.ObjectID, updateData bson.M) error {
-	collection := db.Instance.Client.Database(db.Instance.Dbname).
-		Collection(db.CourseCollection)
-	_, err := collection.UpdateOne(
-		db.Instance.Context,
-		bson.M{"_id": id},
-		bson.M{"$set": updateData},
-	)
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	_, err := collection.UpdateOne(db.Instance.Context, bson.M{"_id": id}, bson.M{"$set": updateData})
 	return err
 }
 
-func UpdateCourseValue(
-	courseID primitive.ObjectID,
-	name string,
-	description string,
-	link string,
-	image string,
-) error {
-
+func UpdateCourseValue(courseID primitive.ObjectID, name, description, link, image string, modules []model.Module) error {
 	updateData := bson.M{
-		"Name":        name,
-		"Description": description,
-		"Link":        link,
+		"name":        name,
+		"description": description,
+		"link":        link,
+		"image":       image,
+		"modules":     modules,
 	}
 	return updateCourseByID(courseID, updateData)
 }
 
 func deleteCourseByID(courseObjectID primitive.ObjectID) error {
-    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-
-    // Delete the course
-    _, err := courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseObjectID})
-    if err != nil {
-        return err
-    }
-
-    return nil
+	courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	_, err := courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseObjectID})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func DeleteCourse(courseID primitive.ObjectID) error {
