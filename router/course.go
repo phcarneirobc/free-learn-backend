@@ -21,7 +21,13 @@ func PostCourse(c *gin.Context) {
 		return
 	}
 
-	object, err := handlers.PostCourse(reading)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"message": "Unauthorized"})
+		return
+	}
+
+	object, err := handlers.PostCourse(reading, userID.(primitive.ObjectID))
 	if err != nil {
 		c.JSON(500, gin.H{"message": err.Error()})
 		return
@@ -103,7 +109,13 @@ func DeleteCourse(c *gin.Context) {
 		return
 	}
 
-	err = handlers.DeleteCourse(courseObjectID)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"message": "Unauthorized"})
+		return
+	}
+
+	err = handlers.DeleteCourse(userID.(primitive.ObjectID), courseObjectID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete course", "details": err.Error()})
 		return

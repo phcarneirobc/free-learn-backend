@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -16,99 +15,95 @@ import (
 )
 
 func Register(user model.User) (*mongo.InsertOneResult, error) {
-    hashedPassword, err := auth.HashPassword(user.Password)
-    if err != nil {
-        return nil, err
-    }
+	hashedPassword, err := auth.HashPassword(user.Password)
+	if err != nil {
+		return nil, err
+	}
 
-    userToInsert := model.User{
-        Id:        primitive.NewObjectID(),
-        Email:      user.Email,
-        Password:  hashedPassword,
-        Professor: user.Professor,
-        Date:      primitive.NewDateTimeFromTime(time.Now()),
-        Cursos:    []primitive.ObjectID{}, 
-    }
+	userToInsert := model.User{
+		Id:        primitive.NewObjectID(),
+		Email:     user.Email,
+		Password:  hashedPassword,
+		Professor: user.Professor,
+		Date:      primitive.NewDateTimeFromTime(time.Now()),
+		Cursos:    []primitive.ObjectID{},
+	}
 
-    ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-    result, err := db.InsertOne(db.Instance.Client, ctx, db.Instance.Dbname, db.UserCollection, userToInsert)
-    if err != nil {
-        return nil, err
-    }
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	result, err := db.InsertOne(db.Instance.Client, ctx, db.Instance.Dbname, db.UserCollection, userToInsert)
+	if err != nil {
+		return nil, err
+	}
 
-    return result, nil
+	return result, nil
 }
 
 type LoginResponse struct {
-    ID    primitive.ObjectID
-    Token string
-    Professor  bool
+	ID        primitive.ObjectID
+	Token     string
+	Professor bool
 }
 
 func Login(user model.User) (LoginResponse, error) {
-    collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
 
-    email := strings.ToLower(user.Email)
-    fmt.Println("Email fornecido:", email)
+	email := strings.ToLower(user.Email)
+	var result model.User
+	err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return LoginResponse{}, errors.New("email not found")
+		}
+		return LoginResponse{}, err
+	}
 
-    var result model.User
-    err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&result)
-    if err != nil {
-        if err == mongo.ErrNoDocuments {
-            return LoginResponse{}, errors.New("email not found")
-        }
-        return LoginResponse{}, err
-    }
+	match := auth.CheckPasswordHash(user.Password, result.Password)
+	if !match {
+		return LoginResponse{}, errors.New("invalid password")
+	}
 
-    fmt.Println("Email encontrado no banco de dados:", result.Email)
-
-    match := auth.CheckPasswordHash(user.Password, result.Password)
-    if !match {
-        return LoginResponse{}, errors.New("invalid password")
-    }
-
-    token, err := auth.GenerateToken(result)
-    if err != nil {
-        return LoginResponse{}, err
-    }
-    return LoginResponse{
-        ID:    result.Id,
-        Token: token,
-        Professor:  result.Professor,
-    }, nil
+	token, err := auth.GenerateToken(result)
+	if err != nil {
+		return LoginResponse{}, err
+	}
+	return LoginResponse{
+		ID:        result.Id,
+		Token:     token,
+		Professor: result.Professor,
+	}, nil
 }
 
 func AddCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) error {
-    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
-    filter := bson.M{"_id": userID}
-    update := bson.M{"$push": bson.M{"cursos": courseID}} 
-    _, err := userCollection.UpdateOne(context.Background(), filter, update)
-    if err != nil {
-        return err
-    }
-    return nil
+	userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	filter := bson.M{"_id": userID}
+	update := bson.M{"$push": bson.M{"cursos": courseID}}
+	_, err := userCollection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
-    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
-    var user model.User
-    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
-    if err != nil {
-        return nil, err
-    }
+	userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	var user model.User
+	err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
 
-    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
-    cursor, err := courseCollection.Find(context.Background(), filter)
-    if err != nil {
-        return nil, err
-    }
-    defer cursor.Close(context.Background())
+	courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+	cursor, err := courseCollection.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
 
-    var courses []model.Course
-    if err = cursor.All(context.Background(), &courses); err != nil {
-        return nil, err
-    }
+	var courses []model.Course
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		return nil, err
+	}
 
-    return courses, nil
+	return courses, nil
 }

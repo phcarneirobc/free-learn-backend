@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -8,9 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/dgrijalva/jwt-go"
+	"github.com/phcarneirobc/free-learn/db"
 	"github.com/phcarneirobc/free-learn/model"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,7 +42,7 @@ func AuthenticateToken(c *gin.Context) {
 		return
 	}
 
-	token, err := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(bearerToken[1], &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("Unexpected signing method")
 		}
@@ -51,11 +54,26 @@ func AuthenticateToken(c *gin.Context) {
 		return
 	}
 
-	if !token.Valid {
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		return
 	}
 
+	var user model.User
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	err = collection.FindOne(context.Background(), bson.M{"email": claims.Email}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+
+	c.Set("userID", user.Id)
+	c.Set("userProfessor", user.Professor)
 	c.Next()
 }
 
@@ -107,4 +125,13 @@ func ValidateToken(tknStr string) (bool, string) {
 	}
 
 	return true, claims.Email
+}
+
+func RequireProfessor(c *gin.Context) {
+	userProfessor, exists := c.Get("userProfessor")
+	if !exists || !userProfessor.(bool) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access forbidden: professors only"})
+		return
+	}
+	c.Next()
 }

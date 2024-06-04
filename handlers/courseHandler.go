@@ -2,17 +2,20 @@ package handlers
 
 import (
 	"context"
+	"errors"
+
+	"github.com/phcarneirobc/free-learn/model"
 	"time"
 
 	"github.com/phcarneirobc/free-learn/db"
-	"github.com/phcarneirobc/free-learn/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func PostCourse(read model.Course) (model.Course, error) {
+
+func PostCourse(read model.Course, creatorID primitive.ObjectID) (model.Course, error) {
 	toInsert := model.Course{
 		Id:          primitive.NewObjectID(),
 		Date:        primitive.NewDateTimeFromTime(time.Now()),
@@ -21,6 +24,7 @@ func PostCourse(read model.Course) (model.Course, error) {
 		Image:       read.Image,
 		Link:        read.Link,
 		Modules:     read.Modules,
+		CreatorID:   creatorID,
 	}
 
 	_, err := db.InsertOne(
@@ -48,12 +52,6 @@ func getCourseByID(id primitive.ObjectID) (*model.Course, error) {
 	return &result, nil
 }
 
-func readAllCourse(client *mongo.Client, ctx context.Context, dataBase, col string) (*mongo.Cursor, error) {
-	collection := client.Database(dataBase).Collection(col)
-	cur, err := collection.Find(ctx, bson.M{})
-	return cur, err
-}
-
 func GetAllCourses() ([]model.Course, error) {
 	cur, err := readAllCourse(db.Instance.Client, db.Instance.Context, db.Instance.Dbname, db.CourseCollection)
 	if err != nil {
@@ -78,10 +76,10 @@ func GetAllCourses() ([]model.Course, error) {
 	return results, nil
 }
 
-func updateCourseByID(id primitive.ObjectID, updateData bson.M) error {
-	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-	_, err := collection.UpdateOne(db.Instance.Context, bson.M{"_id": id}, bson.M{"$set": updateData})
-	return err
+func readAllCourse(client *mongo.Client, ctx context.Context, dataBase, col string) (*mongo.Cursor, error) {
+	collection := client.Database(dataBase).Collection(col)
+	cur, err := collection.Find(ctx, bson.M{})
+	return cur, err
 }
 
 func UpdateCourseValue(courseID primitive.ObjectID, name, description, link, image string, modules []model.Module) error {
@@ -95,16 +93,28 @@ func UpdateCourseValue(courseID primitive.ObjectID, name, description, link, ima
 	return updateCourseByID(courseID, updateData)
 }
 
-func deleteCourseByID(courseObjectID primitive.ObjectID) error {
+func updateCourseByID(id primitive.ObjectID, updateData bson.M) error {
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	_, err := collection.UpdateOne(db.Instance.Context, bson.M{"_id": id}, bson.M{"$set": updateData})
+	return err
+}
+
+func DeleteCourse(userID, courseID primitive.ObjectID) error {
 	courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-	_, err := courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseObjectID})
+	var course model.Course
+
+	err := courseCollection.FindOne(context.Background(), bson.M{"_id": courseID}).Decode(&course)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("course not found")
+		}
 		return err
 	}
-	return nil
-}
 
-func DeleteCourse(courseID primitive.ObjectID) error {
-	return deleteCourseByID(courseID)
-}
+	if course.CreatorID != userID {
+		return errors.New("user is not the creator of the course")
+	}
 
+	_, err = courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseID})
+	return err
+}

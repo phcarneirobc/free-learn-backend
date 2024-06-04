@@ -1,5 +1,3 @@
-// router.go
-
 package router
 
 import (
@@ -25,7 +23,7 @@ func Start(port string) {
 	r.Use(CORSMiddleware())
 
 	r.GET("/ping", HealthRoute)
-	r.GET("/get", GetAllCourses)
+	r.GET("/get",  GetAllCourses)
 	r.POST("/register", func(c *gin.Context) {
 		var user model.User
 		if err := c.ShouldBindJSON(&user); err != nil {
@@ -55,12 +53,11 @@ func Start(port string) {
 	})
 
 	pg := r.Group("/courses")
-	pg.Use(CORSMiddleware())
 	pg.Use(auth.AuthenticateToken)
-	pg.POST("/post", PostCourse)
-	pg.GET("/get/:id", GetCourseByID)
-	pg.PUT("/update/:id", UpdateCourseValue)
-	pg.DELETE("/delete/:id", DeleteCourse)
+	pg.POST("/post", auth.RequireProfessor, PostCourse)
+	pg.GET("/get/:id", auth.RequireProfessor, GetCourseByID)
+	pg.PUT("/update/:id", auth.RequireProfessor, UpdateCourseValue)
+	pg.DELETE("/delete/:id", auth.RequireProfessor, DeleteCourse)
 	pg.POST("/add-course-to-user/:id", AddCourseToUser)
 	pg.GET("/get-user-courses/:id", func(c *gin.Context) {
 		userID := c.Param("id")
@@ -125,3 +122,6 @@ func AddCourseToUserHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
 }
+
+
+
