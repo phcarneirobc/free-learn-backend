@@ -5,13 +5,14 @@ import (
 	"errors"
 	"time"
 
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/phcarneirobc/free-learn/db"
-	"github.com/phcarneirobc/free-learn/model"
+	models "github.com/phcarneirobc/free-learn/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"net/http"
 )
 
 func SearchCourses(c *gin.Context) {
@@ -171,10 +172,10 @@ func UpdateCourseValue(c *gin.Context) {
 	courseID := c.Param("id")
 
 	var courseUpdate struct {
-		Name        string         `json:"name"`
-		Description string         `json:"description"`
-		Link        string         `json:"link"`
-		Image       string         `json:"image"`
+		Name        string          `json:"name"`
+		Description string          `json:"description"`
+		Link        string          `json:"link"`
+		Image       string          `json:"image"`
 		Modules     []models.Module `json:"modules"`
 	}
 

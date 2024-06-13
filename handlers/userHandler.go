@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 	"github.com/phcarneirobc/free-learn/auth"
 	"github.com/phcarneirobc/free-learn/db"
-	"github.com/phcarneirobc/free-learn/model"
+	models "github.com/phcarneirobc/free-learn/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 func Register(c *gin.Context) {
@@ -166,5 +167,3 @@ func addCourseToUser(userID primitive.ObjectID, courseID primitive.ObjectID) err
 	}
 	return nil
 }
-
-

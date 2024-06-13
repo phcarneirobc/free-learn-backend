@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	"github.com/phcarneirobc/free-learn/db"
 	"github.com/phcarneirobc/free-learn/model"
 	"go.mongodb.org/mongo-driver/bson"

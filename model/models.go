@@ -21,7 +21,7 @@ type Course struct {
 	Link        string             `json:"link" bson:"link"`
 	Modules     []Module           `json:"modules" bson:"modules"`
 	CreatorID   primitive.ObjectID `json:"creator_id" bson:"creator_id"`
-	Ratings     []Rating           `json:"ratings" bson:"ratings"` 
+	Ratings     []Rating           `json:"ratings" bson:"ratings"`
 }
 
 type User struct {

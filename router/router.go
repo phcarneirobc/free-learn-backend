@@ -31,17 +31,17 @@ func Start(port string) {
 	pg.DELETE("/delete/:id", auth.RequireProfessor, handlers.DeleteCourse)
 	pg.POST("/add-course-to-user/:id", handlers.AddCourseToUser)
 	pg.POST("/rate/:id", handlers.RateCourse)
-    pg.GET("/get-user-courses/:id", handlers.GetUserCourses)
-    
+	pg.GET("/get-user-courses/:id", handlers.GetUserCourses)
+
 	err := r.Run(port)
 	if err != nil {
 		panic(err)
 	}
-   
+
 }
 
 func PrepareApp() error {
-    return db.StartDB()
+	return db.StartDB()
 }
 
 func CORSMiddleware() gin.HandlerFunc {
