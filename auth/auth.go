@@ -60,7 +60,7 @@ func AuthenticateToken(c *gin.Context) {
 		return
 	}
 
-	var user model.User
+	var user models.User
 	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
 	err = collection.FindOne(context.Background(), bson.M{"email": claims.Email}).Decode(&user)
 	if err != nil {
@@ -87,7 +87,7 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func GenerateToken(user model.User) (string, error) {
+func GenerateToken(user models.User) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		Email: user.Email,

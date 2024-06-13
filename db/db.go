@@ -32,9 +32,7 @@ func StartDB() error {
 	return nil
 }
 
-func connect(
-	uri string,
-) (*mongo.Client, context.Context, context.CancelFunc, error) {
+func connect(uri string) (*mongo.Client, context.Context, context.CancelFunc, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	return client, ctx, cancel, err
@@ -52,19 +50,8 @@ func close(client *mongo.Client, ctx context.Context) error {
 	return client.Disconnect(ctx)
 }
 
-func InsertOne(
-	client *mongo.Client,
-	ctx context.Context,
-	dataBase, col string,
-	doc interface{},
-) (*mongo.InsertOneResult, error) {
-
-	// select database and collection ith Client.Database method
-	// and Database.Collection method
+func InsertOne(client *mongo.Client, ctx context.Context, dataBase, col string, doc interface{}) (*mongo.InsertOneResult, error) {
 	collection := client.Database(dataBase).Collection(col)
-
-	// InsertOne accept two argument of type Context
-	// and of empty interface
 	result, err := collection.InsertOne(ctx, doc)
 	return result, err
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/phcarneirobc/free-learn/router"
-
 	"github.com/joho/godotenv"
 )
 

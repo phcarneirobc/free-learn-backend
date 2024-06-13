@@ -7,7 +7,6 @@ import (
 const CourseCollection = "course"
 const UserCollection = "users"
 
-// const
 func getDbConnectionString() string {
 	str := os.Getenv("DB_CONNECTION_STRING")
 	if str == "" {
