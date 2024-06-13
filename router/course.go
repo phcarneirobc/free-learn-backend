@@ -73,11 +73,11 @@ func UpdateCourseValue(c *gin.Context) {
 	courseID := c.Param("id")
 
 	var courseUpdate struct {
-		Name        string          `json:"name"`
-		Description string          `json:"description"`
-		Link        string          `json:"link"`
-		Image       string          `json:"image"`
-		Modules     []model.Module  `json:"modules"`
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		Link        string         `json:"link"`
+		Image       string         `json:"image"`
+		Modules     []model.Module `json:"modules"`
 	}
 
 	if err := c.BindJSON(&courseUpdate); err != nil {
@@ -125,56 +125,56 @@ func DeleteCourse(c *gin.Context) {
 }
 
 func GetUserCourses(userID primitive.ObjectID) ([]model.Course, error) {
-    userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
-    var user model.User
-    err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
-    if err != nil {
-        return nil, err
-    }
+	userCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	var user model.User
+	err := userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
 
-    courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
-    filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
-    cursor, err := courseCollection.Find(context.Background(), filter)
-    if err != nil {
-        return nil, err
-    }
-    defer cursor.Close(context.Background())
+	courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	filter := bson.M{"_id": bson.M{"$in": user.Cursos}}
+	cursor, err := courseCollection.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
 
-    var courses []model.Course
-    if err = cursor.All(context.Background(), &courses); err != nil {
-        return nil, err
-    }
+	var courses []model.Course
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		return nil, err
+	}
 
-    return courses, nil
+	return courses, nil
 }
 
 func AddCourseToUser(c *gin.Context) {
-    userID := c.Param("id")
+	userID := c.Param("id")
 
-    userIDObj, err := primitive.ObjectIDFromHex(userID)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
+	userIDObj, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
 
-    var courseID struct {
-        CourseID string `json:"course_id"`
-    }
-    if err := c.ShouldBindJSON(&courseID); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
-        return
-    }
+	var courseID struct {
+		CourseID string `json:"course_id"`
+	}
+	if err := c.ShouldBindJSON(&courseID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
 
-    courseIDObj, err := primitive.ObjectIDFromHex(courseID.CourseID)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
-        return
-    }
+	courseIDObj, err := primitive.ObjectIDFromHex(courseID.CourseID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
 
-    if err := handlers.AddCourseToUser(userIDObj, courseIDObj); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
+	if err := handlers.AddCourseToUser(userIDObj, courseIDObj); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Course added to user successfully"})
 }

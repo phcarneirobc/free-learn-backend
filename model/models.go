@@ -1,3 +1,5 @@
+// model/model.go
+
 package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,6 +23,7 @@ type Course struct {
 	Link        string             `json:"link" bson:"link"`
 	Modules     []Module           `json:"modules" bson:"modules"`
 	CreatorID   primitive.ObjectID `json:"creator_id" bson:"creator_id"`
+	Ratings     []Rating           `json:"ratings" bson:"ratings"` 
 }
 
 type User struct {
@@ -30,4 +33,10 @@ type User struct {
 	Professor bool                 `json:"professor"     bson:"professor"`
 	Password  string               `json:"password"      bson:"password"`
 	Cursos    []primitive.ObjectID `json:"cursos"        bson:"cursos"`
+}
+
+type Rating struct {
+	UserID primitive.ObjectID `json:"user_id" bson:"user_id"`
+	Score  int                `json:"score" bson:"score"`
+	Review string             `json:"review" bson:"review"`
 }

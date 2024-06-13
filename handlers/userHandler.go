@@ -15,6 +15,14 @@ import (
 )
 
 func Register(user model.User) (*mongo.InsertOneResult, error) {
+	existingUser, err := getUserByEmail(user.Email)
+	if err != nil {
+		return nil, err
+	}
+	if existingUser != nil {
+		return nil, errors.New("user with this email already exists")
+	}
+
 	hashedPassword, err := auth.HashPassword(user.Password)
 	if err != nil {
 		return nil, err
@@ -36,6 +44,20 @@ func Register(user model.User) (*mongo.InsertOneResult, error) {
 	}
 
 	return result, nil
+}
+
+func getUserByEmail(email string) (*model.User, error) {
+	email = strings.ToLower(email)
+	var user model.User
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.UserCollection)
+	err := collection.FindOne(context.Background(), bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
 }
 
 type LoginResponse struct {

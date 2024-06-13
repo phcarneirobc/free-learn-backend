@@ -1,19 +1,39 @@
+// handlers/handlers.go
+
 package handlers
 
 import (
 	"context"
 	"errors"
-
-	"github.com/phcarneirobc/free-learn/model"
 	"time"
 
 	"github.com/phcarneirobc/free-learn/db"
-
+	"github.com/phcarneirobc/free-learn/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func SearchCourses(query string) ([]model.Course, error) {
+	collection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	filter := bson.M{
+		"$or": []bson.M{
+			{"name": bson.M{"$regex": query, "$options": "i"}},
+			{"description": bson.M{"$regex": query, "$options": "i"}},
+		},
+	}
+	cursor, err := collection.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var courses []model.Course
+	if err = cursor.All(context.Background(), &courses); err != nil {
+		return nil, err
+	}
+	return courses, nil
+}
 
 func PostCourse(read model.Course, creatorID primitive.ObjectID) (model.Course, error) {
 	toInsert := model.Course{
@@ -116,5 +136,29 @@ func DeleteCourse(userID, courseID primitive.ObjectID) error {
 	}
 
 	_, err = courseCollection.DeleteOne(context.Background(), bson.M{"_id": courseID})
+	return err
+}
+
+func RateCourse(userID, courseID primitive.ObjectID, rating model.Rating) error {
+	courseCollection := db.Instance.Client.Database(db.Instance.Dbname).Collection(db.CourseCollection)
+	var course model.Course
+
+	err := courseCollection.FindOne(context.Background(), bson.M{"_id": courseID}).Decode(&course)
+	if err != nil {
+		return err
+	}
+
+	if course.CreatorID == userID {
+		return errors.New("professors cannot rate their own courses")
+	}
+
+	for _, existingRating := range course.Ratings {
+		if existingRating.UserID == userID {
+			return errors.New("user has already rated this course")
+		}
+	}
+
+	course.Ratings = append(course.Ratings, rating)
+	_, err = courseCollection.UpdateOne(context.Background(), bson.M{"_id": courseID}, bson.M{"$set": bson.M{"ratings": course.Ratings}})
 	return err
 }
